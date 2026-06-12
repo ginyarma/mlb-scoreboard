@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLB Live Scoreboard</title>
+  <meta name="description" content="Live scoreboard of all MLB games, auto-refreshing from the MLB StatsAPI." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚾</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="title">⚾ MLB Live Scoreboard</h1>
+      <div class="controls">
+        <button id="prev-day" class="nav-btn" title="Previous day" aria-label="Previous day">‹</button>
+        <input type="date" id="date-picker" class="date-picker" />
+        <button id="next-day" class="nav-btn" title="Next day" aria-label="Next day">›</button>
+        <button id="today-btn" class="today-btn" title="Jump to today">Today</button>
+      </div>
+    </div>
+    <div class="statusline">
+      <span id="status-text" class="status-text">Loading…</span>
+      <span class="status-right">
+        <span id="refresh-state" class="refresh-state"></span>
+        <button id="refresh-btn" class="refresh-btn" title="Refresh now">↻ Refresh</button>
+      </span>
+    </div>
+  </header>
+
+  <main id="board" class="board">
+    <p class="placeholder">Loading today's games…</p>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Data: <a href="https://statsapi.mlb.com" target="_blank" rel="noopener">MLB StatsAPI</a>
+      (unofficial, keyless). Auto-refreshes every <span id="refresh-secs"></span>s.
+      Not affiliated with MLB.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
