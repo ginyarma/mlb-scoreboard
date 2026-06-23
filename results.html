@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Victory Bombs · Yesterday's Card</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#131a26; --panel2:#0f1622; --line:#1f2a3a;
+    --txt:#e8eef7; --mut:#8da2bd; --good:#27d07a; --bad:#ff5d6c;
+    --accent:#ffce4b; --elite:#ffce4b; --strong:#5db7ff; --lean:#9aa7bd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 18px 60px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:22px;margin:0;letter-spacing:.3px}
+  h1 .b{color:var(--accent)}
+  .sub{color:var(--mut);font-size:13px}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:18px 0}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .tile .k{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+  .tile .v{font-size:26px;font-weight:700;margin-top:4px}
+  .tile .v small{font-size:14px;color:var(--mut);font-weight:500}
+  .pos{color:var(--good)} .neg{color:var(--bad)}
+  section{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:18px}
+  section h2{font-size:14px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px}
+  .pill.ELITE{background:rgba(255,206,75,.16);color:var(--elite)}
+  .pill.STRONG{background:rgba(93,183,255,.16);color:var(--strong)}
+  .pill.LEAN{background:rgba(154,167,189,.16);color:var(--lean)}
+  .pill.BET{background:rgba(39,208,122,.16);color:var(--good)}
+  .res-hit{color:var(--good);font-weight:700}
+  .res-no{color:var(--mut)}
+  .tierline{display:flex;gap:18px;flex-wrap:wrap;margin-top:4px}
+  .tierline .ti{font-size:13px;color:var(--mut)}
+  .tierline .ti b{color:var(--txt)}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:64px;margin-top:6px}
+  .spark .bar{flex:1;min-width:4px;border-radius:3px 3px 0 0;background:var(--strong);opacity:.85}
+  .muted{color:var(--mut)}
+  .err{color:var(--bad)}
+  footer{margin-top:26px;color:var(--mut);font-size:12px;text-align:center}
+  a{color:var(--strong)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="b">Victory Bombs</span> · Card Review</h1>
+    <div class="sub" id="meta">loading…</div>
+  </header>
+
+  <div class="grid" id="tiles"></div>
+
+  <section>
+    <h2>Picks — graded</h2>
+    <div id="table-wrap"><p class="muted">loading…</p></div>
+  </section>
+
+  <section>
+    <h2>Running track record</h2>
+    <div id="running"></div>
+  </section>
+
+  <section>
+    <h2>Calibration — predicted vs actual</h2>
+    <div id="calibration"></div>
+  </section>
+
+  <footer>
+    Data: model card vs MLB StatsAPI actuals · <span id="gen"></span>
+  </footer>
+</div>
+
+<script>
+// Where the grader publishes results. Override with ?src=… if needed.
+const SRC = new URLSearchParams(location.search).get("src") || "results.json";
+const pct = x => (x==null?"–":(x*100).toFixed(1)+"%");
+const signU = x => (x>0?"+":"")+x.toFixed(2)+"u";
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+
+function tile(k, v, cls){
+  return `<div class="tile"><div class="k">${k}</div><div class="v ${cls||''}">${v}</div></div>`;
+}
+
+function render(d){
+  document.getElementById("meta").textContent =
+    `${d.date} · ${d.games_scored} games scored` + (d.unfinished?` · ${d.unfinished} not final`:"");
+  document.getElementById("gen").textContent = "generated " + (d.generated_at||"");
+
+  const a = d.summary.ALL || {picks:0,hits:0,hit_rate:0,net_u:0,roi:0,staked_u:0};
+  const tiles = [
+    tile("Picks", a.picks),
+    tile("Hit rate", `${pct(a.hit_rate)} <small>(${a.hits}/${a.picks})</small>`),
+  ];
+  if (a.staked_u){
+    tiles.push(tile("Net units", signU(a.net_u), a.net_u>=0?"pos":"neg"));
+    tiles.push(tile("ROI", (a.roi*100>=0?"+":"")+(a.roi*100).toFixed(1)+"%", a.roi>=0?"pos":"neg"));
+  }
+  document.getElementById("tiles").innerHTML = tiles.join("");
+
+  // per-tier line
+  const order = ["ELITE","STRONG","LEAN","BET"];
+  const tl = order.filter(t=>d.summary[t]).map(t=>{
+    const s=d.summary[t];
+    return `<span class="ti"><span class="pill ${t}">${t}</span> <b>${pct(s.hit_rate)}</b> (${s.hits}/${s.picks})</span>`;
+  }).join("");
+
+  // picks table
+  const priced = (d.picks||[]).some(p=>p.best_over && p.best_over!=="None");
+  const head = `<div class="tierline">${tl}</div><table><thead><tr>
+      <th>Player</th><th>Team</th><th>Tier</th>
+      <th class="num">Model%</th>${priced?'<th class="num">Over</th>':''}
+      <th>Result</th>${priced?'<th class="num">P&L</th>':''}
+    </tr></thead><tbody>`;
+  const body = (d.picks||[]).map(p=>{
+    const hit = p.hit ? `<span class="res-hit">HR${p.hr_count>1?" ×"+p.hr_count:""}</span>`
+                      : `<span class="res-no">—</span>`;
+    const pl = p.pnl_units>0?`<span class="pos">${signU(p.pnl_units)}</span>`
+             : p.pnl_units<0?`<span class="neg">${signU(p.pnl_units)}</span>`:`<span class="muted">–</span>`;
+    return `<tr>
+      <td>${p.player||""}</td><td class="muted">${p.team||""}</td>
+      <td><span class="pill ${p.tier}">${p.tier}</span></td>
+      <td class="num">${p.model_pct==null?"–":p.model_pct.toFixed(1)+"%"}</td>
+      ${priced?`<td class="num">${p.best_over||"–"}</td>`:''}
+      <td>${hit}</td>${priced?`<td class="num">${pl}</td>`:''}
+    </tr>`;
+  }).join("");
+  document.getElementById("table-wrap").innerHTML =
+    (d.picks&&d.picks.length) ? head+body+"</tbody></table>"
+                              : '<p class="muted">No pick-tier rows on this card.</p>';
+
+  // running record
+  const r = d.running || {days:0};
+  if (r.days){
+    const bars = (r.series||[]).slice(-30).map(s=>{
+      const h = Math.max(6, Math.round((s.hit_rate||0)*64));
+      const col = s.hit_rate>=0.5?"var(--good)":s.hit_rate>=0.3?"var(--strong)":"var(--bad)";
+      return `<div class="bar" style="height:${h}px;background:${col}" title="${s.date}: ${pct(s.hit_rate)} (${s.hits}/${s.picks})"></div>`;
+    }).join("");
+    const pl = r.staked_u ? ` · net <b class="${r.net_u>=0?'pos':'neg'}">${signU(r.net_u)}</b> · ROI <b class="${r.roi>=0?'pos':'neg'}">${(r.roi*100>=0?"+":"")+(r.roi*100).toFixed(1)}%</b>` : "";
+    document.getElementById("running").innerHTML =
+      `<div class="muted">${r.days} day(s) · <b style="color:var(--txt)">${pct(r.hit_rate)}</b> hit rate (${r.hits}/${r.picks})${pl}</div>
+       <div class="spark">${bars}</div>
+       <div class="muted" style="font-size:12px;margin-top:6px">daily hit rate, last ${Math.min(30,(r.series||[]).length)} graded days</div>`;
+  } else {
+    document.getElementById("running").innerHTML = '<p class="muted">No history yet.</p>';
+  }
+
+  // calibration
+  const c = d.calibration || {n:0, by_bucket:[], by_tier:{}};
+  const gapCell = g => {
+    const cls = Math.abs(g)<=2 ? "muted" : (g>0 ? "pos" : "neg");
+    return `<span class="${cls}">${g>0?"+":""}${g.toFixed(1)}</span>`;
+  };
+  if (c.n){
+    let rows = (c.by_bucket||[]).map(b=>`<tr>
+        <td>${b.bucket}%</td><td class="num">${b.n}</td>
+        <td class="num">${b.predicted.toFixed(1)}%</td>
+        <td class="num">${b.actual.toFixed(1)}%</td>
+        <td class="num">${gapCell(b.gap)}</td></tr>`).join("");
+    const tiers = Object.keys(c.by_tier||{});
+    let tierRows = ["ELITE","STRONG","LEAN","BET"].filter(t=>c.by_tier[t]).map(t=>{
+        const v=c.by_tier[t];
+        return `<tr><td><span class="pill ${t}">${t}</span></td><td class="num">${v.n}</td>
+          <td class="num">${v.predicted.toFixed(1)}%</td><td class="num">${v.actual.toFixed(1)}%</td>
+          <td class="num">${gapCell(v.gap)}</td></tr>`;}).join("");
+    document.getElementById("calibration").innerHTML =
+      `<div class="muted" style="margin-bottom:10px">${c.n} graded picks · gap = actual − predicted
+        (near 0 = well calibrated; <span class="pos">＋</span> underconfident, <span class="neg">－</span> overconfident).</div>
+       <table><thead><tr><th>Model% bucket</th><th class="num">N</th><th class="num">Predicted</th>
+         <th class="num">Actual</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody></table>
+       ${tierRows?`<div style="height:14px"></div>
+       <table><thead><tr><th>By tier</th><th class="num">N</th><th class="num">Predicted</th>
+         <th class="num">Actual</th><th class="num">Gap</th></tr></thead><tbody>${tierRows}</tbody></table>`:""}`;
+  } else {
+    document.getElementById("calibration").innerHTML =
+      '<p class="muted">Not enough graded picks yet — calibration appears once history builds.</p>';
+  }
+}
+
+fetch(SRC, {cache:"no-store"})
+  .then(r=>{if(!r.ok)throw new Error(r.status+" "+r.statusText);return r.json();})
+  .then(render)
+  .catch(e=>{
+    document.getElementById("meta").innerHTML = '<span class="err">could not load '+SRC+'</span>';
+    document.getElementById("table-wrap").innerHTML =
+      `<p class="err">Failed to load <code>${SRC}</code> (${e.message}).</p>
+       <p class="muted">Make sure the grader's <code>results.json</code> is published to this path
+       (set <code>WEB_DATA_DIR</code> in grade_card.py, or copy it into your site's deploy).</p>`;
+  });
+</script>
+</body>
+</html>
