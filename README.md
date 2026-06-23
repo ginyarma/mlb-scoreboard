@@ -1,5 +1,11 @@
 # MLB Live Scoreboard
 
+> ℹ️ **Not the deployed product.** The live "Victory Bombs / HR Engine" app — dashboard,
+> picks, grading, and its own scoreboard — is the Flask app **`ginyarma/hr-engine`**
+> (deployed on Railway at `hr-engine.up.railway.app`). This repo is an earlier,
+> standalone static scoreboard lineage kept for reference; changes here do **not**
+> affect the live app.
+
 A self-contained, auto-refreshing scoreboard of all of the day's MLB games. It
 polls the keyless [MLB StatsAPI](https://statsapi.mlb.com) schedule endpoint
 directly from the browser every ~25 seconds and updates in place — no server,
